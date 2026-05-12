@@ -403,7 +403,7 @@ function renderSummary(){
 }
 
 // ─── ANDORES ────────────────────────────────────────────────────────────────
-const ANDORES_SQL=`CREATE TABLE andores (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  andor_name text NOT NULL,\n  reservation_name text NOT NULL,\n  price numeric NOT NULL DEFAULT 0,\n  paid boolean DEFAULT false,\n  reservation_date date,\n  notes text,\n  created_at timestamp DEFAULT now()\n);\nALTER TABLE andores DISABLE ROW LEVEL SECURITY;`;
+const ANDORES_SQL=`CREATE TABLE andores (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  andor_name text NOT NULL,\n  reserved boolean DEFAULT false,\n  reservation_name text,\n  price numeric NOT NULL DEFAULT 0,\n  paid boolean DEFAULT false,\n  reservation_date date,\n  notes text,\n  created_at timestamp DEFAULT now()\n);\nALTER TABLE andores DISABLE ROW LEVEL SECURITY;`;
 
 function renderAndores(){
   const el=g('alist');
@@ -411,44 +411,69 @@ function renderAndores(){
     el.innerHTML=`<div class="notice show" style="margin:12px"><h3>⚠️ Tabela andores em falta</h3><p>Executa este SQL no <b>SQL Editor</b> do Supabase:</p><pre>${ANDORES_SQL}</pre></div>`;
     return;
   }
-  const fl=andorF==='all'?andores:andores.filter(a=>andorF==='paid'?a.paid:!a.paid);
-  if(!fl.length){el.innerHTML=`<div class="sp">Nenhuma reserva${andorF!=='all'?' neste filtro':''}.<br><small>Usa o + para adicionar.</small></div>`;return;}
-  const totPaid=fl.filter(a=>a.paid).reduce((s,a)=>s+(a.price||0),0);
-  const totPending=fl.filter(a=>!a.paid).reduce((s,a)=>s+(a.price||0),0);
-  el.innerHTML=`
+  const available=andores.filter(a=>!a.reserved);
+  const reserved=andores.filter(a=>a.reserved);
+  const filteredRes=andorF==='all'?reserved:reserved.filter(a=>andorF==='paid'?a.paid:!a.paid);
+  const totPaid=reserved.filter(a=>a.paid).reduce((s,a)=>s+(a.price||0),0);
+  const totPending=reserved.filter(a=>!a.paid).reduce((s,a)=>s+(a.price||0),0);
+
+  const summaryHtml=reserved.length?`
     <div class="card">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">
-        <div><div style="font-size:15px;font-weight:800">${fl.length}</div><div style="font-size:11px;color:var(--sub)">Reservas</div></div>
+        <div><div style="font-size:15px;font-weight:800">${reserved.length}</div><div style="font-size:11px;color:var(--sub)">Reservados</div></div>
         <div><div style="font-size:15px;font-weight:800;color:var(--ok)">${totPaid.toFixed(2)}€</div><div style="font-size:11px;color:var(--sub)">Pago</div></div>
         <div><div style="font-size:15px;font-weight:800;color:var(--warn)">${totPending.toFixed(2)}€</div><div style="font-size:11px;color:var(--sub)">Por pagar</div></div>
       </div>
-    </div>
-    ${fl.map(a=>`
-      <div class="card" style="cursor:pointer" onclick="openAmod(andores.find(x=>x.id==='${a.id}'))">
-        <div class="ch">
-          <div>
-            <div class="ct">${esc(a.andor_name)}</div>
-            <div class="cs">${esc(a.reservation_name)}${a.reservation_date?' · '+fdate(a.reservation_date):''}</div>
+    </div>`:'';
+
+  const availableHtml=`
+    <div class="stitle" style="margin:8px 0 6px">Disponíveis (${available.length})</div>
+    ${available.length
+      ? available.map(a=>`
+        <div class="card" style="cursor:pointer" onclick="openAmod(andores.find(x=>x.id==='${a.id}'))">
+          <div class="ch">
+            <div><div class="ct">${esc(a.andor_name)}</div>${a.notes?`<div class="cs">${esc(a.notes)}</div>`:''}</div>
+            <span class="badge" style="background:#e3f2fd;color:#1565c0;align-self:center">Livre</span>
           </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-size:15px;font-weight:800">${(a.price||0).toFixed(2)}€</div>
-            <span class="badge ${a.paid?'badge-ok':'badge-warn'}">${a.paid?'✓ Pago':'⏳ Por pagar'}</span>
+        </div>`).join('')
+      : `<div style="color:var(--sub);font-size:13px;padding:4px 0 8px">Todos os andores estão reservados.</div>`}`;
+
+  const reservedHtml=`
+    <div class="stitle" style="margin:12px 0 6px">Reservados (${reserved.length})</div>
+    ${filteredRes.length
+      ? filteredRes.map(a=>`
+        <div class="card" style="cursor:pointer" onclick="openAmod(andores.find(x=>x.id==='${a.id}'))">
+          <div class="ch">
+            <div>
+              <div class="ct">${esc(a.andor_name)}</div>
+              <div class="cs">${esc(a.reservation_name||'')}${a.reservation_date?' · '+fdate(a.reservation_date):''}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:15px;font-weight:800">${(a.price||0).toFixed(2)}€</div>
+              <span class="badge ${a.paid?'badge-ok':'badge-warn'}">${a.paid?'✓ Pago':'⏳ Por pagar'}</span>
+            </div>
           </div>
-        </div>
-      </div>`).join('')}
-    <div style="height:72px"></div>`;
+        </div>`).join('')
+      : `<div style="color:var(--sub);font-size:13px;padding:4px 0 8px">${andorF!=='all'?'Nenhum andor neste filtro.':'Nenhum andor reservado ainda.'}</div>`}`;
+
+  el.innerHTML=summaryHtml+availableHtml+reservedHtml+'<div style="height:72px"></div>';
 }
+
+function toggleReserved(){g('aresfields').style.display=g('areserved').checked?'block':'none';}
+g('areserved').addEventListener('change',toggleReserved);
 
 function openAmod(a){
   editAId=a?a.id:null;
-  g('amtitle').textContent=a?'✏️ Editar Reserva':'🎭 Nova Reserva';
+  g('amtitle').textContent=a?'✏️ Editar Andor':'🎭 Novo Andor';
   g('aandor').value=a?(a.andor_name||''):'';
+  g('areserved').checked=a?!!a.reserved:false;
   g('aname').value=a?(a.reservation_name||''):'';
-  g('aprice').value=a?(a.price!=null?a.price:''):'';
+  g('aprice').value=a&&a.reserved?(a.price!=null?a.price:''):'';
   g('adate').value=a?(a.reservation_date||''):'';
   g('apaid').checked=a?!!a.paid:false;
   g('anotes').value=a?(a.notes||''):'';
   g('adelrow').style.display=a?'block':'none';
+  toggleReserved();
   g('amod').classList.add('open');
 }
 window.openAmod=openAmod;
@@ -462,12 +487,16 @@ g('afbar').addEventListener('click',e=>{
 g('addabtn').addEventListener('click',()=>openAmod(null));
 g('acancel').addEventListener('click',()=>g('amod').classList.remove('open'));
 g('asave').addEventListener('click',async()=>{
-  const andor_name=g('aandor').value.trim(),reservation_name=g('aname').value.trim();
-  const price=parseFloat(g('aprice').value)||0,paid=g('apaid').checked;
-  const reservation_date=g('adate').value||null,notes=g('anotes').value.trim();
+  const andor_name=g('aandor').value.trim();
+  const reserved=g('areserved').checked;
+  const reservation_name=reserved?g('aname').value.trim():null;
+  const price=reserved?parseFloat(g('aprice').value)||0:0;
+  const paid=reserved?g('apaid').checked:false;
+  const reservation_date=reserved?(g('adate').value||null):null;
+  const notes=g('anotes').value.trim();
   if(!andor_name){toast('Preenche o nome do Andor');return;}
-  if(!reservation_name){toast('Preenche o nome da reserva');return;}
-  const p={andor_name,reservation_name,price,paid,reservation_date,notes};
+  if(reserved&&!reservation_name){toast('Preenche o nome da reserva');return;}
+  const p={andor_name,reserved,reservation_name,price,paid,reservation_date,notes};
   try{
     if(editAId){
       const r=await api('andores','PATCH',p,`?id=eq.${editAId}`);

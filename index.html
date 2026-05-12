@@ -221,21 +221,28 @@
 <div class="overlay" id="amod">
   <div class="sheet">
     <div class="handle"></div>
-    <div class="mtitle" id="amtitle">🎭 Nova Reserva</div>
+    <div class="mtitle" id="amtitle">🎭 Novo Andor</div>
     <div class="fg"><label>Nome do Andor</label><input type="text" id="aandor" placeholder="Ex: Andor de Nossa Senhora..."></div>
-    <div class="fg"><label>Nome da Reserva</label><input type="text" id="aname" placeholder="Ex: João Silva..."></div>
-    <div class="gcols">
-      <div class="fg"><label>Preço (€)</label><input type="number" id="aprice" placeholder="0.00" min="0" step="0.01"></div>
-      <div class="fg"><label>Data da Reserva</label><input type="date" id="adate"></div>
-    </div>
     <div class="fg">
       <label class="cbx-label">
-        <input type="checkbox" id="apaid"><span class="cbx-box"></span> ✅ Já está pago
+        <input type="checkbox" id="areserved"><span class="cbx-box"></span> 📋 Andor Reservado
       </label>
+    </div>
+    <div id="aresfields" style="display:none">
+      <div class="fg"><label>Nome da Reserva</label><input type="text" id="aname" placeholder="Ex: João Silva..."></div>
+      <div class="gcols">
+        <div class="fg"><label>Preço (€)</label><input type="number" id="aprice" placeholder="0.00" min="0" step="0.01"></div>
+        <div class="fg"><label>Data da Reserva</label><input type="date" id="adate"></div>
+      </div>
+      <div class="fg">
+        <label class="cbx-label">
+          <input type="checkbox" id="apaid"><span class="cbx-box"></span> ✅ Já está pago
+        </label>
+      </div>
     </div>
     <div class="fg"><label>Notas</label><textarea id="anotes" placeholder="Notas opcionais..."></textarea></div>
     <div class="brow"><button class="btn bs" id="acancel">Cancelar</button><button class="btn bp" id="asave">💾 Guardar</button></div>
-    <div id="adelrow" class="delrow"><button class="btn bd" id="adel">🗑️ Eliminar reserva</button></div>
+    <div id="adelrow" class="delrow"><button class="btn bd" id="adel">🗑️ Eliminar andor</button></div>
   </div>
 </div>
 
