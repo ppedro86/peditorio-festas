@@ -2,7 +2,7 @@
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Peditório das Festas</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <link rel="stylesheet" href="css/styles.css"/>
@@ -139,15 +139,15 @@
     <div id="rcomf">
       <div class="fg"><label>Nome do Estabelecimento</label><input type="text" id="rname" placeholder="Ex: Café Central, Mercearia Silva..."></div>
       <div class="fg"><label>Tipo de Publicidade</label>
-        <div style="display:flex;flex-direction:column;gap:10px;padding:6px 2px">
-          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
-            <input type="checkbox" id="sub_cartao" value="Cartão no Cartaz" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 📋 Cartão no Cartaz
+        <div style="display:flex;flex-direction:column;gap:8px;padding:4px 0">
+          <label class="cbx-label">
+            <input type="checkbox" id="sub_cartao" value="Cartão no Cartaz"> 📋 Cartão no Cartaz
           </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
-            <input type="checkbox" id="sub_lona" value="Lona" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 🖼️ Lona na Festa
+          <label class="cbx-label">
+            <input type="checkbox" id="sub_lona" value="Lona"> 🖼️ Lona na Festa
           </label>
-          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
-            <input type="checkbox" id="sub_outro" value="Outro" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 📌 Outro
+          <label class="cbx-label">
+            <input type="checkbox" id="sub_outro" value="Outro"> 📌 Outro
           </label>
         </div>
       </div>
