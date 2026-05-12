@@ -89,6 +89,28 @@
       <div class="card" id="cbreak"></div>
     </div>
   </div>
+
+  <!-- TAB: ANDORES -->
+  <div id="tab-andores" class="tp">
+    <div class="fbar" id="afbar">
+      <div class="chip active" data-a="all">Todos</div>
+      <div class="chip" data-a="unpaid">Por pagar</div>
+      <div class="chip" data-a="paid">Pagos</div>
+    </div>
+    <div class="scroll" id="alist"><div class="sp">A carregar...</div></div>
+    <button class="fab" id="addabtn">+</button>
+  </div>
+
+  <!-- TAB: DOCS -->
+  <div id="tab-docs" class="tp">
+    <div class="doc-upload-bar">
+      <label class="btn bp doc-upload-btn">
+        📎 Carregar Documento
+        <input type="file" id="docfile" style="display:none" multiple>
+      </label>
+    </div>
+    <div class="scroll" id="doclist"><div class="sp">A carregar...</div></div>
+  </div>
 </div>
 
 <nav id="bnav">
@@ -97,6 +119,8 @@
   <button class="nb" data-t="despesas"><span class="ni">💸</span>Despesas</button>
   <button class="nb" data-t="movimentos"><span class="ni">📋</span>Movimentos</button>
   <button class="nb" data-t="resumo"><span class="ni">📊</span>Resumo</button>
+  <button class="nb" data-t="andores"><span class="ni">🎭</span>Andores</button>
+  <button class="nb" data-t="docs"><span class="ni">📄</span>Docs</button>
 </nav>
 
 <!-- MODAL: CASA -->
@@ -190,6 +214,28 @@
     </div>
     <div class="brow"><button class="btn bs" id="ecancel">Cancelar</button><button class="btn bp" id="esave">💾 Guardar</button></div>
     <div id="edelrow" class="delrow"><button class="btn bd" id="edel">🗑️ Eliminar despesa</button></div>
+  </div>
+</div>
+
+<!-- MODAL: ANDOR -->
+<div class="overlay" id="amod">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle" id="amtitle">🎭 Nova Reserva</div>
+    <div class="fg"><label>Nome do Andor</label><input type="text" id="aandor" placeholder="Ex: Andor de Nossa Senhora..."></div>
+    <div class="fg"><label>Nome da Reserva</label><input type="text" id="aname" placeholder="Ex: João Silva..."></div>
+    <div class="gcols">
+      <div class="fg"><label>Preço (€)</label><input type="number" id="aprice" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="fg"><label>Data da Reserva</label><input type="date" id="adate"></div>
+    </div>
+    <div class="fg">
+      <label class="cbx-label">
+        <input type="checkbox" id="apaid"><span class="cbx-box"></span> ✅ Já está pago
+      </label>
+    </div>
+    <div class="fg"><label>Notas</label><textarea id="anotes" placeholder="Notas opcionais..."></textarea></div>
+    <div class="brow"><button class="btn bs" id="acancel">Cancelar</button><button class="btn bp" id="asave">💾 Guardar</button></div>
+    <div id="adelrow" class="delrow"><button class="btn bd" id="adel">🗑️ Eliminar reserva</button></div>
   </div>
 </div>
 

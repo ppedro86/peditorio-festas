@@ -2,9 +2,9 @@ const SB='https://dydcfbpyjljezzrcfllf.supabase.co';
 const SK='sb_publishable_ptOR937-AB9mbAcv6KjtDQ_MgpHsgH3';
 const HD={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'};
 
-let houses=[], expenses=[], revenues=[], markers={}, map=null;
-let editHId=null, editEId=null, editRId=null, tempLL=null;
-let catF='all', revF='all', dateF='all', searchQ='', specificDate='';
+let houses=[], expenses=[], revenues=[], andores=[], markers={}, map=null;
+let editHId=null, editEId=null, editRId=null, editAId=null, tempLL=null;
+let catF='all', revF='all', dateF='all', andorF='all', searchQ='', specificDate='', andoresTableExists=true;
 
 // ─── API ────────────────────────────────────────────────────────────────────
 async function api(table,method='GET',body=null,q=''){
@@ -31,10 +31,17 @@ async function loadAll(){
     revenues=[];
     if(e.code==='42P01') showNotice();
   }
+  try{
+    andores=await api('andores','GET',null,'?select=*&order=created_at.desc');
+    andoresTableExists=true;
+  }catch(e){
+    andores=[];
+    if(e.code==='42P01') andoresTableExists=false;
+  }
   refresh();
 }
 
-function refresh(){renderMarkers();renderRevenues();renderExpenses();renderMovimentos();renderSummary();updateHdr();}
+function refresh(){renderMarkers();renderRevenues();renderExpenses();renderMovimentos();renderSummary();renderAndores();updateHdr();}
 
 // ─── MAP ────────────────────────────────────────────────────────────────────
 const SC={'Por Visitar':'#9e9e9e','Visitada':'#1565c0','Doou':'#2e7d32','Ausente':'#e65100','Recusou':'#b71c1c'};
@@ -395,6 +402,168 @@ function renderSummary(){
     :'<div style="color:var(--sub);font-size:13px;padding:6px 0">Nenhuma despesa ainda.</div>'}`;
 }
 
+// ─── ANDORES ────────────────────────────────────────────────────────────────
+const ANDORES_SQL=`CREATE TABLE andores (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  andor_name text NOT NULL,\n  reservation_name text NOT NULL,\n  price numeric NOT NULL DEFAULT 0,\n  paid boolean DEFAULT false,\n  reservation_date date,\n  notes text,\n  created_at timestamp DEFAULT now()\n);\nALTER TABLE andores DISABLE ROW LEVEL SECURITY;`;
+
+function renderAndores(){
+  const el=g('alist');
+  if(!andoresTableExists){
+    el.innerHTML=`<div class="notice show" style="margin:12px"><h3>⚠️ Tabela andores em falta</h3><p>Executa este SQL no <b>SQL Editor</b> do Supabase:</p><pre>${ANDORES_SQL}</pre></div>`;
+    return;
+  }
+  const fl=andorF==='all'?andores:andores.filter(a=>andorF==='paid'?a.paid:!a.paid);
+  if(!fl.length){el.innerHTML=`<div class="sp">Nenhuma reserva${andorF!=='all'?' neste filtro':''}.<br><small>Usa o + para adicionar.</small></div>`;return;}
+  const totPaid=fl.filter(a=>a.paid).reduce((s,a)=>s+(a.price||0),0);
+  const totPending=fl.filter(a=>!a.paid).reduce((s,a)=>s+(a.price||0),0);
+  el.innerHTML=`
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">
+        <div><div style="font-size:15px;font-weight:800">${fl.length}</div><div style="font-size:11px;color:var(--sub)">Reservas</div></div>
+        <div><div style="font-size:15px;font-weight:800;color:var(--ok)">${totPaid.toFixed(2)}€</div><div style="font-size:11px;color:var(--sub)">Pago</div></div>
+        <div><div style="font-size:15px;font-weight:800;color:var(--warn)">${totPending.toFixed(2)}€</div><div style="font-size:11px;color:var(--sub)">Por pagar</div></div>
+      </div>
+    </div>
+    ${fl.map(a=>`
+      <div class="card" style="cursor:pointer" onclick="openAmod(andores.find(x=>x.id==='${a.id}'))">
+        <div class="ch">
+          <div>
+            <div class="ct">${esc(a.andor_name)}</div>
+            <div class="cs">${esc(a.reservation_name)}${a.reservation_date?' · '+fdate(a.reservation_date):''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:15px;font-weight:800">${(a.price||0).toFixed(2)}€</div>
+            <span class="badge ${a.paid?'badge-ok':'badge-warn'}">${a.paid?'✓ Pago':'⏳ Por pagar'}</span>
+          </div>
+        </div>
+      </div>`).join('')}
+    <div style="height:72px"></div>`;
+}
+
+function openAmod(a){
+  editAId=a?a.id:null;
+  g('amtitle').textContent=a?'✏️ Editar Reserva':'🎭 Nova Reserva';
+  g('aandor').value=a?(a.andor_name||''):'';
+  g('aname').value=a?(a.reservation_name||''):'';
+  g('aprice').value=a?(a.price!=null?a.price:''):'';
+  g('adate').value=a?(a.reservation_date||''):'';
+  g('apaid').checked=a?!!a.paid:false;
+  g('anotes').value=a?(a.notes||''):'';
+  g('adelrow').style.display=a?'block':'none';
+  g('amod').classList.add('open');
+}
+window.openAmod=openAmod;
+
+g('afbar').addEventListener('click',e=>{
+  const c=e.target.closest('.chip');if(!c)return;
+  andorF=c.dataset.a;
+  document.querySelectorAll('#afbar .chip').forEach(x=>x.classList.toggle('active',x===c));
+  renderAndores();
+});
+g('addabtn').addEventListener('click',()=>openAmod(null));
+g('acancel').addEventListener('click',()=>g('amod').classList.remove('open'));
+g('asave').addEventListener('click',async()=>{
+  const andor_name=g('aandor').value.trim(),reservation_name=g('aname').value.trim();
+  const price=parseFloat(g('aprice').value)||0,paid=g('apaid').checked;
+  const reservation_date=g('adate').value||null,notes=g('anotes').value.trim();
+  if(!andor_name){toast('Preenche o nome do Andor');return;}
+  if(!reservation_name){toast('Preenche o nome da reserva');return;}
+  const p={andor_name,reservation_name,price,paid,reservation_date,notes};
+  try{
+    if(editAId){
+      const r=await api('andores','PATCH',p,`?id=eq.${editAId}`);
+      const i=andores.findIndex(x=>x.id===editAId);if(i>=0&&r?.[0])andores[i]=r[0];
+      toast('Reserva atualizada ✓');
+    }else{
+      const r=await api('andores','POST',p);if(r?.[0])andores.unshift(r[0]);
+      toast('Reserva criada ✓');
+    }
+    g('amod').classList.remove('open');renderAndores();
+  }catch(e){toast('Erro: '+e.message);}
+});
+g('adel').addEventListener('click',async()=>{
+  if(!editAId||!confirm('Eliminar esta reserva?'))return;
+  try{
+    await api('andores','DELETE',null,`?id=eq.${editAId}`);
+    andores=andores.filter(a=>a.id!==editAId);
+    g('amod').classList.remove('open');renderAndores();toast('Eliminado ✓');
+  }catch(e){toast('Erro: '+e.message);}
+});
+
+// ─── DOCUMENTOS ─────────────────────────────────────────────────────────────
+async function renderDocs(){
+  const el=g('doclist');
+  el.innerHTML=`<div class="sp">A carregar...</div>`;
+  try{
+    const r=await fetch(`${SB}/storage/v1/object/list/documentos`,{
+      method:'POST',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'},
+      body:JSON.stringify({prefix:'',limit:100,offset:0,sortBy:{column:'created_at',order:'desc'}})
+    });
+    if(!r.ok)throw new Error('bucket');
+    const files=await r.json();
+    if(!files.length){el.innerHTML=`<div class="sp">Nenhum documento.<br><small>Usa o botão acima para carregar.</small></div>`;return;}
+    el.innerHTML=files.map(f=>`
+      <div class="card" style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:26px;flex-shrink:0">${docIcon(f.name)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(f.name.replace(/^\d+_/,''))}</div>
+          <div style="font-size:11px;color:var(--sub)">${fsize(f.metadata?.size)}${f.created_at?' · '+fdate(f.created_at):''}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <a href="${SB}/storage/v1/object/public/documentos/${encodeURIComponent(f.name)}" target="_blank" style="text-decoration:none"><button class="btn bp" style="padding:8px 10px;font-size:14px;flex:none;width:auto;margin:0">⬇️</button></a>
+          <button class="btn bd" style="padding:8px 10px;font-size:14px;flex:none;width:auto;margin:0" onclick="delDoc('${f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')">🗑️</button>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    el.innerHTML=`<div class="notice show" style="margin:12px"><h3>⚠️ Storage não configurado</h3><p>Cria um bucket público chamado <b>documentos</b> em <b>Supabase → Storage</b>.</p></div>`;
+  }
+}
+
+function docIcon(name){
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  const m={pdf:'📄',jpg:'🖼️',jpeg:'🖼️',png:'🖼️',gif:'🖼️',webp:'🖼️',doc:'📝',docx:'📝',xls:'📊',xlsx:'📊',mp3:'🎵',wav:'🎵',mp4:'🎬',mov:'🎬'};
+  return m[ext]||'📎';
+}
+function fsize(b){
+  if(!b)return '';
+  if(b<1024)return b+' B';
+  if(b<1048576)return (b/1024).toFixed(1)+' KB';
+  return (b/1048576).toFixed(1)+' MB';
+}
+
+g('docfile').addEventListener('change',async e=>{
+  const files=Array.from(e.target.files);
+  if(!files.length)return;
+  for(const file of files){
+    const fname=Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
+    toast('A carregar '+file.name+'...');
+    try{
+      const r=await fetch(`${SB}/storage/v1/object/documentos/${encodeURIComponent(fname)}`,{
+        method:'POST',
+        headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':file.type||'application/octet-stream'},
+        body:file
+      });
+      if(!r.ok){const err=await r.json().catch(()=>({}));throw new Error(err.error||r.statusText);}
+      toast(file.name+' carregado ✓');
+    }catch(err){toast('Erro: '+err.message);}
+  }
+  e.target.value='';
+  renderDocs();
+});
+
+window.delDoc=async name=>{
+  if(!confirm('Eliminar este documento?'))return;
+  try{
+    const r=await fetch(`${SB}/storage/v1/object/documentos`,{
+      method:'DELETE',
+      headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'},
+      body:JSON.stringify({prefixes:[name]})
+    });
+    if(!r.ok)throw new Error('Erro ao eliminar');
+    toast('Eliminado ✓');renderDocs();
+  }catch(e){toast('Erro: '+e.message);}
+};
+
 // ─── TABS ───────────────────────────────────────────────────────────────────
 document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>{
   const t=b.dataset.t;
@@ -402,6 +571,7 @@ document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tp').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');g('tab-'+t).classList.add('active');
   if(t==='map')setTimeout(()=>map?.invalidateSize(),60);
+  if(t==='docs')renderDocs();
 }));
 
 // ─── HEADER ─────────────────────────────────────────────────────────────────
