@@ -44,7 +44,7 @@ function mkIcon(st){
 }
 function initMap(){
   map=L.map('map').setView([40.8667,-7.7333],16);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri © DigitalGlobe',maxZoom:19}).addTo(map);
   map.on('click',e=>{tempLL=e.latlng;editHId=null;openHmod(null);});
 }
 function renderMarkers(){
