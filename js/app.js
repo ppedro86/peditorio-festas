@@ -2,9 +2,9 @@ const SB='https://dydcfbpyjljezzrcfllf.supabase.co';
 const SK='sb_publishable_ptOR937-AB9mbAcv6KjtDQ_MgpHsgH3';
 const HD={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'};
 
-let houses=[], expenses=[], revenues=[], andores=[], markers={}, map=null;
+let houses=[], expenses=[], revenues=[], andores=[], notas=[], markers={}, map=null;
 let editHId=null, editEId=null, editRId=null, editAId=null, tempLL=null;
-let catF='all', revF='all', dateF='all', andorF='all', searchQ='', specificDate='', andoresTableExists=true;
+let catF='all', revF='all', dateF='all', andorF='all', searchQ='', specificDate='', andoresTableExists=true, notasTableExists=true;
 
 // ─── API ────────────────────────────────────────────────────────────────────
 async function api(table,method='GET',body=null,q=''){
@@ -38,10 +38,17 @@ async function loadAll(){
     andores=[];
     if(e.code==='42P01') andoresTableExists=false;
   }
+  try{
+    notas=await api('notas','GET',null,'?select=*&order=created_at.desc');
+    notasTableExists=true;
+  }catch(e){
+    notas=[];
+    if(e.code==='42P01') notasTableExists=false;
+  }
   refresh();
 }
 
-function refresh(){renderMarkers();renderRevenues();renderExpenses();renderMovimentos();renderSummary();renderAndores();updateHdr();}
+function refresh(){renderMarkers();renderRevenues();renderExpenses();renderMovimentos();renderSummary();renderAndores();renderNotas();updateHdr();}
 
 // ─── MAP ────────────────────────────────────────────────────────────────────
 const SC={'Por Visitar':'#9e9e9e','Visitada':'#1565c0','Doou':'#2e7d32','Ausente':'#e65100','Recusou':'#b71c1c'};
@@ -590,6 +597,51 @@ window.delDoc=async name=>{
     });
     if(!r.ok)throw new Error('Erro ao eliminar');
     toast('Eliminado ✓');renderDocs();
+  }catch(e){toast('Erro: '+e.message);}
+};
+
+// ─── NOTAS ──────────────────────────────────────────────────────────────────
+const NOTAS_SQL=`CREATE TABLE notas (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  text text NOT NULL,\n  created_at timestamp DEFAULT now()\n);\nALTER TABLE notas DISABLE ROW LEVEL SECURITY;`;
+
+function renderNotas(){
+  const el=g('notalist');
+  if(!el)return;
+  if(!notasTableExists){
+    el.innerHTML=`<div class="notice show" style="margin:12px"><h3>⚠️ Tabela notas em falta</h3><p>Executa este SQL no <b>SQL Editor</b> do Supabase:</p><pre>${NOTAS_SQL}</pre></div>`;
+    return;
+  }
+  if(!notas.length){el.innerHTML=`<div class="sp">Nenhuma nota ainda.<br><small>Usa a caixa acima para escrever.</small></div>`;return;}
+  el.innerHTML=notas.map(n=>`
+    <div class="card" style="display:flex;gap:10px;align-items:flex-start">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(n.text)}</div>
+        <div style="font-size:11px;color:var(--sub);margin-top:5px">${fdate(n.created_at)}</div>
+      </div>
+      <button class="btn bd" style="flex:none;width:auto;margin:0;padding:8px 10px;font-size:14px" onclick="delNota('${n.id}')">🗑️</button>
+    </div>`).join('');
+}
+
+g('notaaddbtn').addEventListener('click',async()=>{
+  const text=g('notainput').value.trim();
+  if(!text){toast('Escreve uma nota primeiro');return;}
+  try{
+    const r=await api('notas','POST',{text});
+    if(r?.[0])notas.unshift(r[0]);
+    g('notainput').value='';
+    renderNotas();
+  }catch(e){toast('Erro: '+e.message);}
+});
+
+g('notainput').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&(e.ctrlKey||e.metaKey))g('notaaddbtn').click();
+});
+
+window.delNota=async id=>{
+  if(!confirm('Apagar esta nota?'))return;
+  try{
+    await api('notas','DELETE',null,`?id=eq.${id}`);
+    notas=notas.filter(n=>n.id!==id);
+    renderNotas();toast('Nota apagada ✓');
   }catch(e){toast('Erro: '+e.message);}
 };
 

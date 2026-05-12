@@ -86,3 +86,7 @@ textarea{resize:vertical;min-height:65px}
 .badge-warn{background:#fff3e0;color:var(--warn)}
 .doc-upload-bar{padding:12px 12px 0;flex-shrink:0}
 .doc-upload-btn{display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;flex:none;width:100%;margin:0;border-radius:8px}
+.notas-bar{padding:12px;flex-shrink:0;display:flex;gap:8px;align-items:flex-end}
+.notas-bar textarea{flex:1;resize:none;height:76px;font-size:14px;border-radius:8px;padding:10px 12px;border:1.5px solid var(--bdr);font-family:inherit}
+.notas-bar textarea:focus{border-color:var(--pri-l);outline:none}
+.notas-btn{flex:none;width:46px;height:46px;padding:0;font-size:24px;margin:0}
