@@ -142,8 +142,8 @@ window.openRevById=id=>openRmod(revenues.find(r=>r.id===id));
 g('rcancel').addEventListener('click',()=>g('rmod').classList.remove('open'));
 g('rsave').addEventListener('click',async()=>{
   const type=g('rtype').value;
-  const value=parseFloat(g('rvalue').value)||0;
-  if(!value){toast('Valor inválido');return;}
+  const value=parseFloat(g('rvalue').value);
+  if(isNaN(value)||value<0){toast('Valor inválido');return;}
   let p={type,value,notes:g('rnotes').value.trim()};
   if(type==='Comércio'){
     const name=g('rname').value.trim();
@@ -246,7 +246,7 @@ g('ecancel').addEventListener('click',()=>g('emod').classList.remove('open'));
 g('esave').addEventListener('click',async()=>{
   const description=g('edesc').value.trim(),value=parseFloat(g('eval').value),category=g('ecat').value;
   if(!description){toast('Preenche a descrição');return;}
-  if(!value||value<=0){toast('Valor inválido');return;}
+  if(isNaN(value)||value<0){toast('Valor inválido');return;}
   try{
     if(editEId){
       const r=await api('expenses','PATCH',{description,value,category},`?id=eq.${editEId}`);
