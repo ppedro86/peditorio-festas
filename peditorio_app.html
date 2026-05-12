@@ -1,0 +1,658 @@
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--pri:#1a237e;--pri-l:#3949ab;--bg:#f0f2f5;--card:#fff;--txt:#212121;--sub:#757575;--bdr:#e0e0e0;--ok:#2e7d32;--err:#b71c1c;--warn:#e65100}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--txt);height:100vh;overflow:hidden;display:flex;flex-direction:column}
+#hdr{background:var(--pri);color:#fff;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:100}
+#hdr h1{font-size:15px;font-weight:700}
+.hsub{font-size:11px;opacity:.75;margin-top:1px}
+.hsaldo{font-size:16px;font-weight:800;color:#69f0ae}
+#tc{flex:1;overflow:hidden;position:relative}
+.tp{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.tp.active{display:flex}
+#map{flex:1;z-index:1}
+.minfo{background:var(--pri);color:#fff;padding:7px 14px;font-size:12px;flex-shrink:0}
+.legend{position:absolute;bottom:62px;right:10px;background:#fff;border-radius:8px;padding:8px 10px;font-size:11px;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:1000;pointer-events:none}
+.li{display:flex;align-items:center;gap:6px;padding:2px 0}
+.ld{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.scroll{flex:1;overflow-y:auto;padding:12px;-webkit-overflow-scrolling:touch}
+.card{background:var(--card);border-radius:10px;padding:14px;margin-bottom:10px;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.ch{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.ct{font-size:14px;font-weight:600;line-height:1.3}
+.cs{font-size:12px;color:var(--sub);margin-top:2px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.sc{background:var(--card);border-radius:10px;padding:12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.sv{font-size:18px;font-weight:800;margin-bottom:2px}
+.sl{font-size:11px;color:var(--sub)}
+.fab{position:absolute;bottom:62px;right:14px;width:52px;height:52px;border-radius:50%;background:var(--pri-l);color:#fff;border:none;font-size:26px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;z-index:900}
+#bnav{background:#fff;border-top:1px solid var(--bdr);display:flex;flex-shrink:0;z-index:100}
+.nb{flex:1;border:none;background:none;padding:7px 2px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;font-size:9px;color:var(--sub);transition:color .15s;min-width:0}
+.nb.active{color:var(--pri-l);font-weight:700}
+.ni{font-size:20px;line-height:1.2}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:flex-end}
+.overlay.open{display:flex}
+.sheet{background:#fff;border-radius:16px 16px 0 0;width:100%;max-height:90vh;overflow-y:auto;padding:16px;animation:up .22s ease}
+@keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.handle{width:36px;height:4px;background:#ddd;border-radius:2px;margin:0 auto 14px}
+.mtitle{font-size:17px;font-weight:800;margin-bottom:16px;color:var(--pri)}
+.fg{margin-bottom:13px}
+label{display:block;font-size:11px;font-weight:700;color:var(--sub);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+input,select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:15px;background:#fff;color:var(--txt);outline:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--pri-l)}
+textarea{resize:vertical;min-height:65px}
+.brow{display:flex;gap:10px;margin-top:16px}
+.btn{flex:1;padding:12px;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer}
+.btn:active{opacity:.8}
+.bp{background:var(--pri-l);color:#fff}
+.bs{background:var(--bg);color:var(--txt)}
+.bd{background:#ffebee;color:var(--err);width:100%;margin-top:8px}
+.stitle{font-size:11px;font-weight:800;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.srow{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f5f5f5}
+.srow:last-child{border-bottom:none}
+.fbar{display:flex;gap:6px;overflow-x:auto;padding:8px 12px;flex-shrink:0;scrollbar-width:none}
+.fbar::-webkit-scrollbar{display:none}
+.chip{white-space:nowrap;padding:5px 12px;border-radius:16px;border:1.5px solid var(--bdr);background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:var(--sub)}
+.chip.active{background:var(--pri);border-color:var(--pri);color:#fff}
+.sbar{padding:8px 12px;flex-shrink:0}
+.sbar input{border-radius:20px;padding:9px 16px;font-size:14px;border:1.5px solid var(--bdr)}
+.mitem{background:var(--card);border-radius:10px;padding:11px 13px;margin-bottom:8px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);display:flex;align-items:center;gap:11px}
+.mico{font-size:22px;flex-shrink:0;line-height:1}
+.mbody{flex:1;min-width:0}
+.mname{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msub{font-size:11px;color:var(--sub);margin-top:1px}
+.mright{text-align:right;flex-shrink:0}
+.mval{font-size:15px;font-weight:800}
+.mdate{font-size:10px;color:var(--sub);margin-top:1px}
+.notice{background:#fff3e0;border:2px solid #ff9800;border-radius:10px;padding:14px;margin-bottom:12px;font-size:13px;display:none}
+.notice.show{display:block}
+.notice h3{color:#e65100;margin-bottom:8px;font-size:14px}
+.notice pre{background:#f5f5f5;padding:10px;border-radius:6px;font-size:10.5px;overflow-x:auto;white-space:pre-wrap;margin-top:8px;line-height:1.5}
+#toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.82);color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;z-index:9999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap}
+#toast.show{opacity:1}
+.sp{text-align:center;padding:40px 20px;color:var(--sub);font-size:14px;line-height:1.6}
+.gp{color:var(--ok)}.rp{color:var(--err)}
+.gcols{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+</style>
+
+<div id="toast"></div>
+<div id="hdr">
+  <div><h1>🎉 Peditório das Festas</h1><div class="hsub" id="hsub">A ligar...</div></div>
+  <div style="text-align:right"><div class="hsaldo" id="hsaldo">—</div><div class="hsub">saldo</div></div>
+</div>
+
+<div id="tc">
+  <!-- TAB: MAPA -->
+  <div id="tab-map" class="tp active">
+    <div class="minfo">📍 Toca no mapa para marcar uma casa visitada</div>
+    <div id="map"></div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:#9e9e9e"></div>Por visitar</div>
+      <div class="li"><div class="ld" style="background:#1565c0"></div>Visitada</div>
+      <div class="li"><div class="ld" style="background:#2e7d32"></div>Doou</div>
+      <div class="li"><div class="ld" style="background:#e65100"></div>Ausente</div>
+      <div class="li"><div class="ld" style="background:#b71c1c"></div>Recusou</div>
+    </div>
+  </div>
+
+  <!-- TAB: RECEITAS -->
+  <div id="tab-receitas" class="tp">
+    <div class="fbar" id="rfbar">
+      <div class="chip active" data-r="all">Todas</div>
+      <div class="chip" data-r="Comércio">🏪 Comércio</div>
+      <div class="chip" data-r="Rifas">🎟️ Rifas</div>
+    </div>
+    <div class="scroll" id="rlist"><div class="sp">A carregar...</div></div>
+    <button class="fab" id="addrbtn">+</button>
+  </div>
+
+  <!-- TAB: DESPESAS -->
+  <div id="tab-despesas" class="tp">
+    <div class="fbar" id="cfbar">
+      <div class="chip active" data-c="all">Todas</div>
+      <div class="chip" data-c="Material">Material</div>
+      <div class="chip" data-c="Alimentação">Alimentação</div>
+      <div class="chip" data-c="Música">Música</div>
+      <div class="chip" data-c="Transporte">Transporte</div>
+      <div class="chip" data-c="Decoração">Decoração</div>
+      <div class="chip" data-c="Outro">Outro</div>
+    </div>
+    <div class="scroll" id="elist"><div class="sp">A carregar...</div></div>
+    <button class="fab" id="addbtn">+</button>
+  </div>
+
+  <!-- TAB: MOVIMENTOS -->
+  <div id="tab-movimentos" class="tp">
+    <div class="sbar"><input type="text" id="msearch" placeholder="🔍 Pesquisar por nome ou descrição..."></div>
+    <div class="fbar" id="mfbar">
+      <div class="chip active" data-d="all">Tudo</div>
+      <div class="chip" data-d="today">Hoje</div>
+      <div class="chip" data-d="week">Esta semana</div>
+      <div class="chip" data-d="month">Este mês</div>
+      <div class="chip" data-d="receitas">Só receitas</div>
+      <div class="chip" data-d="despesas">Só despesas</div>
+    </div>
+    <div class="scroll" id="mlist"><div class="sp">A carregar...</div></div>
+  </div>
+
+  <!-- TAB: RESUMO -->
+  <div id="tab-resumo" class="tp">
+    <div class="scroll">
+      <div class="notice" id="notice"><h3>⚠️ Tabela revenues em falta</h3>
+        <p>Executa este SQL no <b>SQL Editor</b> do Supabase para criar a tabela de receitas (comércio/rifas):</p>
+        <pre id="nsql"></pre>
+      </div>
+      <div class="sgrid" id="sgrid"></div>
+      <div class="card" id="sbreak"></div>
+      <div class="card" id="cbreak"></div>
+    </div>
+  </div>
+</div>
+
+<nav id="bnav">
+  <button class="nb active" data-t="map"><span class="ni">🗺️</span>Mapa</button>
+  <button class="nb" data-t="receitas"><span class="ni">💰</span>Receitas</button>
+  <button class="nb" data-t="despesas"><span class="ni">💸</span>Despesas</button>
+  <button class="nb" data-t="movimentos"><span class="ni">📋</span>Movimentos</button>
+  <button class="nb" data-t="resumo"><span class="ni">📊</span>Resumo</button>
+</nav>
+
+<!-- MODAL: CASA -->
+<div class="overlay" id="hmod">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle" id="hmtitle">📍 Nova Casa</div>
+    <div class="fg"><label>Nome do Morador</label><input type="text" id="hname" placeholder="Ex: João Silva..."></div>
+    <div class="fg"><label>Morada / Referência</label><input type="text" id="haddr" placeholder="Ex: Rua das Flores nº 3..."></div>
+    <div class="fg"><label>Estado da Visita</label>
+      <select id="hest">
+        <option value="Visitada">🔵 Visitada</option>
+        <option value="Doou">🟢 Doou</option>
+        <option value="Ausente">🟠 Ausente</option>
+        <option value="Recusou">🔴 Recusou</option>
+        <option value="Por Visitar">⚪ Por Visitar</option>
+      </select></div>
+    <div class="fg" id="vgrp"><label>Valor da Doação (€)</label><input type="number" id="hval" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="fg"><label>Notas</label><textarea id="hnotes" placeholder="Notas opcionais..."></textarea></div>
+    <div class="brow"><button class="btn bs" id="hcancel">Cancelar</button><button class="btn bp" id="hsave">💾 Guardar</button></div>
+    <div id="hdelrow" style="display:none;margin-top:6px"><button class="btn bd" id="hdel">🗑️ Eliminar esta casa</button></div>
+  </div>
+</div>
+
+<!-- MODAL: RECEITA (Comércio / Rifas) -->
+<div class="overlay" id="rmod">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle" id="rmtitle">💰 Nova Receita</div>
+    <div class="fg"><label>Tipo de Receita</label>
+      <select id="rtype">
+        <option value="Comércio">🏪 Peditório Comércio</option>
+        <option value="Rifas">🎟️ Venda de Rifas</option>
+      </select></div>
+    <!-- Comércio -->
+    <div id="rcomf">
+      <div class="fg"><label>Nome do Estabelecimento</label><input type="text" id="rname" placeholder="Ex: Café Central, Mercearia Silva..."></div>
+      <div class="fg"><label>Tipo de Publicidade</label>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:6px 2px">
+          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="sub_cartao" value="Cartão no Cartaz" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 📋 Cartão no Cartaz
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="sub_lona" value="Lona" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 🖼️ Lona na Festa
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="sub_outro" value="Outro" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 📌 Outro
+          </label>
+        </div>
+      </div>
+    </div>
+    <!-- Rifas -->
+    <div id="rrifaf" style="display:none">
+      <div class="fg"><label>Descrição</label><input type="text" id="rdesc" placeholder="Ex: Rifas série A, Bloco 1..."></div>
+      <div class="gcols">
+        <div class="fg"><label>Nº de Rifas</label><input type="number" id="rqty" placeholder="0" min="0" step="1"></div>
+        <div class="fg"><label>Preço/Rifa (€)</label><input type="number" id="rprice" placeholder="0.50" min="0" step="0.01"></div>
+      </div>
+    </div>
+    <div class="fg"><label>Valor Total (€)</label><input type="number" id="rvalue" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="fg"><label>Notas</label><textarea id="rnotes" placeholder="Notas opcionais..."></textarea></div>
+    <div class="brow"><button class="btn bs" id="rcancel">Cancelar</button><button class="btn bp" id="rsave">💾 Guardar</button></div>
+    <div id="rdelrow" style="display:none;margin-top:6px"><button class="btn bd" id="rdel">🗑️ Eliminar receita</button></div>
+  </div>
+</div>
+
+<!-- MODAL: DESPESA -->
+<div class="overlay" id="emod">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle" id="emtitle">💸 Nova Despesa</div>
+    <div class="fg"><label>Descrição</label><input type="text" id="edesc" placeholder="Ex: Compra de velas..."></div>
+    <div class="fg"><label>Valor (€)</label><input type="number" id="eval" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="fg"><label>Categoria</label>
+      <select id="ecat">
+        <option>Material</option><option>Alimentação</option>
+        <option>Música</option><option>Transporte</option>
+        <option>Decoração</option><option>Outro</option>
+      </select></div>
+    <div class="brow"><button class="btn bs" id="ecancel">Cancelar</button><button class="btn bp" id="esave">💾 Guardar</button></div>
+    <div id="edelrow" style="display:none;margin-top:6px"><button class="btn bd" id="edel">🗑️ Eliminar despesa</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const SB='https://dydcfbpyjljezzrcfllf.supabase.co';
+const SK='sb_publishable_ptOR937-AB9mbAcv6KjtDQ_MgpHsgH3';
+const HD={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=representation'};
+
+let houses=[], expenses=[], revenues=[], markers={}, map=null;
+let editHId=null, editEId=null, editRId=null, tempLL=null;
+let catF='all', revF='all', dateF='all', searchQ='';
+
+// ─── API ────────────────────────────────────────────────────────────────────
+async function api(table,method='GET',body=null,q=''){
+  const r=await fetch(`${SB}/rest/v1/${table}${q}`,{method,headers:HD,body:body?JSON.stringify(body):undefined});
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw Object.assign(new Error(e.message||r.statusText),{code:e.code});}
+  return r.status===204?null:r.json();
+}
+
+async function loadAll(){
+  // Load houses + expenses (required)
+  try{
+    [houses,expenses]=await Promise.all([
+      api('houses','GET',null,'?select=*&order=visitdate.desc'),
+      api('expenses','GET',null,'?select=*&order=date.desc')
+    ]);
+  }catch(e){
+    if(e.code==='PGRST301'||e.message?.includes('permission')) showRLS();
+    else toast('Erro ao carregar: '+e.message);
+    return;
+  }
+  // Load revenues separately (table may not exist yet)
+  try{
+    revenues=await api('revenues','GET',null,'?select=*&order=date.desc');
+    document.getElementById('notice').classList.remove('show');
+  }catch(e){
+    revenues=[];
+    if(e.code==='42P01') showNotice();
+  }
+  refresh();
+}
+
+function refresh(){renderMarkers();renderRevenues();renderExpenses();renderMovimentos();renderSummary();updateHdr();}
+
+// ─── MAP ────────────────────────────────────────────────────────────────────
+const SC={'Por Visitar':'#9e9e9e','Visitada':'#1565c0','Doou':'#2e7d32','Ausente':'#e65100','Recusou':'#b71c1c'};
+function mkIcon(st){
+  const c=SC[st]||'#9e9e9e';
+  return L.divIcon({html:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 34" width="24" height="34"><path d="M12 1C7.03 1 3 5.03 3 10c0 6 9 22 9 22s9-16 9-22C21 5.03 16.97 1 12 1z" fill="${c}" stroke="white" stroke-width="1.8"/><circle cx="12" cy="10" r="4" fill="white" opacity=".85"/></svg>`,className:'',iconSize:[24,34],iconAnchor:[12,34]});
+}
+function initMap(){
+  map=L.map('map').setView([40.8667,-7.7333],16);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+  map.on('click',e=>{tempLL=e.latlng;editHId=null;openHmod(null);});
+}
+function renderMarkers(){
+  Object.values(markers).forEach(m=>map.removeLayer(m));
+  markers={};
+  houses.forEach(h=>{
+    const m=L.marker([h.lat,h.lng],{icon:mkIcon(h.status)}).addTo(map);
+    m.on('click',()=>openHmod(h));
+    markers[h.id]=m;
+  });
+}
+
+// ─── HOUSE MODAL ────────────────────────────────────────────────────────────
+function openHmod(h){
+  editHId=h?h.id:null;
+  g('hmtitle').textContent=h?'🏠 Editar Casa':'📍 Nova Casa';
+  g('hname').value=h?(h.name||''):'';
+  g('haddr').value=h?(h.address||''):'';
+  g('hest').value=h?h.status:'Visitada';
+  g('hval').value=h?(h.duevalue||''):'';
+  g('hnotes').value=h?(h.notes||''):'';
+  g('hdelrow').style.display=h?'block':'none';
+  toggleHVal();
+  g('hmod').classList.add('open');
+}
+function toggleHVal(){g('vgrp').style.display=g('hest').value==='Doou'?'block':'none';}
+g('hest').addEventListener('change',toggleHVal);
+g('hcancel').addEventListener('click',()=>{g('hmod').classList.remove('open');tempLL=null;});
+g('hsave').addEventListener('click',async()=>{
+  const name=g('hname').value.trim(),address=g('haddr').value.trim(),status=g('hest').value;
+  const duevalue=parseFloat(g('hval').value)||0,notes=g('hnotes').value.trim();
+  const p={name,address,status,duevalue:status==='Doou'?duevalue:0,notes};
+  try{
+    if(editHId){
+      const r=await api('houses','PATCH',p,`?id=eq.${editHId}`);
+      const i=houses.findIndex(h=>h.id===editHId);if(i>=0&&r?.[0])houses[i]=r[0];
+      toast('Casa atualizada ✓');
+    }else{
+      if(!tempLL)return;
+      const r=await api('houses','POST',{...p,lat:tempLL.lat,lng:tempLL.lng});
+      if(r?.[0])houses.unshift(r[0]);
+    }
+    g('hmod').classList.remove('open');tempLL=null;
+    renderMarkers();renderMovimentos();renderSummary();updateHdr();
+  }catch(e){toast('Erro: '+e.message);}
+});
+g('hdel').addEventListener('click',async()=>{
+  if(!editHId||!confirm('Eliminar esta casa?'))return;
+  try{
+    await api('houses','DELETE',null,`?id=eq.${editHId}`);
+    houses=houses.filter(h=>h.id!==editHId);
+    g('hmod').classList.remove('open');
+    renderMarkers();renderMovimentos();renderSummary();updateHdr();toast('Eliminado ✓');
+  }catch(e){toast('Erro: '+e.message);}
+});
+
+// ─── REVENUE MODAL ──────────────────────────────────────────────────────────
+function toggleRType(){
+  const t=g('rtype').value;
+  g('rcomf').style.display=t==='Comércio'?'block':'none';
+  g('rrifaf').style.display=t==='Rifas'?'block':'none';
+}
+g('rtype').addEventListener('change',toggleRType);
+function calcRifaTotal(){
+  const q=parseFloat(g('rqty').value)||0,p=parseFloat(g('rprice').value)||0;
+  if(q>0&&p>0)g('rvalue').value=(q*p).toFixed(2);
+}
+g('rqty').addEventListener('input',calcRifaTotal);
+g('rprice').addEventListener('input',calcRifaTotal);
+
+function openRmod(rev){
+  editRId=rev?rev.id:null;
+  g('rmtitle').textContent=rev?'✏️ Editar Receita':'💰 Nova Receita';
+  const t=rev?(rev.type||'Comércio'):'Comércio';
+  g('rtype').value=t;
+  g('rname').value=t==='Comércio'?(rev?.name||''):'';
+  const subs=(rev?.subtype||'').split(',').map(s=>s.trim());
+  g('sub_cartao').checked=subs.includes('Cartão no Cartaz');
+  g('sub_lona').checked=subs.includes('Lona');
+  g('sub_outro').checked=subs.includes('Outro');
+  g('rdesc').value=t==='Rifas'?(rev?.name||''):'';
+  g('rqty').value=rev?(rev.quantity||''):'';
+  g('rprice').value='';
+  g('rvalue').value=rev?(rev.value||''):'';
+  g('rnotes').value=rev?(rev.notes||''):'';
+  g('rdelrow').style.display=rev?'block':'none';
+  toggleRType();
+  g('rmod').classList.add('open');
+}
+window.openRmod=openRmod;
+window.openRevById=id=>openRmod(revenues.find(r=>r.id===id));
+
+g('rcancel').addEventListener('click',()=>g('rmod').classList.remove('open'));
+g('rsave').addEventListener('click',async()=>{
+  const type=g('rtype').value;
+  const value=parseFloat(g('rvalue').value)||0;
+  if(!value){toast('Valor inválido');return;}
+  let p={type,value,notes:g('rnotes').value.trim()};
+  if(type==='Comércio'){
+    const name=g('rname').value.trim();
+    if(!name){toast('Preenche o nome do estabelecimento');return;}
+    const sels=['sub_cartao','sub_lona','sub_outro'].filter(id=>g(id).checked).map(id=>g(id).value);
+    p.name=name;p.subtype=sels.length?sels.join(', '):null;p.quantity=null;
+  }else{
+    const name=g('rdesc').value.trim();
+    if(!name){toast('Preenche a descrição');return;}
+    p.name=name;p.subtype=null;p.quantity=parseInt(g('rqty').value)||null;
+  }
+  try{
+    if(editRId){
+      const r=await api('revenues','PATCH',p,`?id=eq.${editRId}`);
+      const i=revenues.findIndex(x=>x.id===editRId);if(i>=0&&r?.[0])revenues[i]=r[0];
+      toast('Receita atualizada ✓');
+    }else{
+      const r=await api('revenues','POST',p);if(r?.[0])revenues.unshift(r[0]);
+    }
+    g('rmod').classList.remove('open');
+    renderRevenues();renderMovimentos();renderSummary();updateHdr();
+  }catch(e){toast('Erro: '+e.message);}
+});
+g('rdel').addEventListener('click',async()=>{
+  if(!editRId||!confirm('Eliminar esta receita?'))return;
+  try{
+    await api('revenues','DELETE',null,`?id=eq.${editRId}`);
+    revenues=revenues.filter(r=>r.id!==editRId);
+    g('rmod').classList.remove('open');
+    renderRevenues();renderMovimentos();renderSummary();updateHdr();toast('Eliminado ✓');
+  }catch(e){toast('Erro: '+e.message);}
+});
+
+// ─── RENDER RECEITAS ────────────────────────────────────────────────────────
+function renderRevenues(){
+  const fl=revF==='all'?revenues:revenues.filter(r=>r.type===revF);
+  const el=g('rlist');
+  if(!fl.length){el.innerHTML=`<div class="sp">Nenhuma receita${revF!=='all'?' nesta categoria':''}.<br><small>Usa o + para adicionar.</small></div>`;return;}
+  const tot=fl.reduce((s,r)=>s+(r.value||0),0);
+  el.innerHTML=`
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:var(--sub)">Total${revF!=='all'?' ('+revF+')':''}</span>
+      <span style="font-size:20px;font-weight:800;color:var(--ok)">+${tot.toFixed(2)}€</span>
+    </div></div>
+    ${fl.map(r=>`
+      <div class="card" style="cursor:pointer" onclick="openRevById('${r.id}')">
+        <div class="ch">
+          <div><div class="ct">${esc(r.name)}</div>
+          <div class="cs">${r.type}${r.subtype?' · '+r.subtype:''}${r.quantity?' · '+r.quantity+' rifas':''} · ${fdate(r.date)}</div></div>
+          <div style="font-size:16px;font-weight:800;color:var(--ok)">+${(r.value||0).toFixed(2)}€</div>
+        </div>
+      </div>`).join('')}
+    <div style="height:72px"></div>`;
+}
+g('rfbar').addEventListener('click',e=>{
+  const c=e.target.closest('.chip');if(!c)return;
+  revF=c.dataset.r;
+  document.querySelectorAll('#rfbar .chip').forEach(x=>x.classList.toggle('active',x===c));
+  renderRevenues();
+});
+g('addrbtn').addEventListener('click',()=>openRmod(null));
+
+// ─── RENDER DESPESAS ────────────────────────────────────────────────────────
+function renderExpenses(){
+  const fl=catF==='all'?expenses:expenses.filter(e=>e.category===catF);
+  const el=g('elist');
+  if(!fl.length){el.innerHTML=`<div class="sp">Nenhuma despesa${catF!=='all'?' nesta categoria':''}.<br><small>Usa o + para adicionar.</small></div>`;return;}
+  const tot=fl.reduce((s,e)=>s+(e.value||0),0);
+  el.innerHTML=`
+    <div class="card"><div style="display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:13px;color:var(--sub)">Total${catF!=='all'?' ('+catF+')':''}</span>
+      <span style="font-size:20px;font-weight:800;color:var(--err)">-${tot.toFixed(2)}€</span>
+    </div></div>
+    ${fl.map(e=>`
+      <div class="card" style="cursor:pointer" onclick="oem('${e.id}')">
+        <div class="ch">
+          <div><div class="ct">${esc(e.description)}</div><div class="cs">${e.category} · ${fdate(e.date)}</div></div>
+          <div style="font-size:16px;font-weight:800;color:var(--err)">-${(e.value||0).toFixed(2)}€</div>
+        </div>
+      </div>`).join('')}
+    <div style="height:72px"></div>`;
+}
+function oem(id){
+  const e=expenses.find(x=>x.id===id);editEId=id;
+  g('emtitle').textContent='✏️ Editar Despesa';
+  g('edesc').value=e.description;g('eval').value=e.value;g('ecat').value=e.category;
+  g('edelrow').style.display='block';g('emod').classList.add('open');
+}
+window.oem=oem;
+g('addbtn').addEventListener('click',()=>{
+  editEId=null;g('emtitle').textContent='💸 Nova Despesa';
+  g('edesc').value='';g('eval').value='';g('ecat').value='Material';
+  g('edelrow').style.display='none';g('emod').classList.add('open');
+});
+g('ecancel').addEventListener('click',()=>g('emod').classList.remove('open'));
+g('esave').addEventListener('click',async()=>{
+  const description=g('edesc').value.trim(),value=parseFloat(g('eval').value),category=g('ecat').value;
+  if(!description){toast('Preenche a descrição');return;}
+  if(!value||value<=0){toast('Valor inválido');return;}
+  try{
+    if(editEId){
+      const r=await api('expenses','PATCH',{description,value,category},`?id=eq.${editEId}`);
+      const i=expenses.findIndex(e=>e.id===editEId);if(i>=0&&r?.[0])expenses[i]=r[0];
+      toast('Despesa atualizada ✓');
+    }else{
+      const r=await api('expenses','POST',{description,value,category});if(r?.[0])expenses.unshift(r[0]);
+    }
+    g('emod').classList.remove('open');renderExpenses();renderMovimentos();renderSummary();updateHdr();
+  }catch(e){toast('Erro: '+e.message);}
+});
+g('edel').addEventListener('click',async()=>{
+  if(!editEId||!confirm('Eliminar esta despesa?'))return;
+  try{
+    await api('expenses','DELETE',null,`?id=eq.${editEId}`);
+    expenses=expenses.filter(e=>e.id!==editEId);
+    g('emod').classList.remove('open');renderExpenses();renderMovimentos();renderSummary();updateHdr();toast('Eliminado ✓');
+  }catch(e){toast('Erro: '+e.message);}
+});
+g('cfbar').addEventListener('click',e=>{
+  const c=e.target.closest('.chip');if(!c)return;
+  catF=c.dataset.c;
+  document.querySelectorAll('#cfbar .chip').forEach(x=>x.classList.toggle('active',x===c));
+  renderExpenses();
+});
+
+// ─── MOVIMENTOS ─────────────────────────────────────────────────────────────
+function buildAll(){
+  const all=[];
+  houses.filter(h=>h.status==='Doou').forEach(h=>all.push({
+    id:h.id,src:'house',icon:'🏠',label:'Peditório Normal',
+    name:h.name||h.address||'Sem nome',sub:h.address||'',
+    value:+(h.duevalue||0),date:h.visitdate
+  }));
+  revenues.forEach(r=>all.push({
+    id:r.id,src:'revenue',icon:r.type==='Comércio'?'🏪':'🎟️',
+    label:r.type+(r.subtype?' · '+r.subtype:'')+(r.quantity?' · '+r.quantity+' rifas':''),
+    name:r.name||'',sub:'',value:+(r.value||0),date:r.date
+  }));
+  expenses.forEach(e=>all.push({
+    id:e.id,src:'expense',icon:'💸',label:e.category,
+    name:e.description||'',sub:'',value:-(e.value||0),date:e.date
+  }));
+  return all.sort((a,b)=>new Date(b.date)-new Date(a.date));
+}
+
+function applyFilters(all){
+  let fl=all;
+  if(searchQ){const q=searchQ.toLowerCase();fl=fl.filter(m=>(m.name+m.label+m.sub).toLowerCase().includes(q));}
+  if(dateF==='receitas') fl=fl.filter(m=>m.value>0);
+  else if(dateF==='despesas') fl=fl.filter(m=>m.value<0);
+  else if(dateF!=='all'){
+    const now=new Date(),s=new Date();
+    if(dateF==='today'){s.setHours(0,0,0,0);}
+    else if(dateF==='week'){s.setDate(now.getDate()-now.getDay());s.setHours(0,0,0,0);}
+    else if(dateF==='month'){s.setDate(1);s.setHours(0,0,0,0);}
+    fl=fl.filter(m=>new Date(m.date)>=s);
+  }
+  return fl;
+}
+
+function renderMovimentos(){
+  const fl=applyFilters(buildAll());
+  const el=g('mlist');
+  if(!fl.length){el.innerHTML=`<div class="sp">Nenhum movimento encontrado.</div>`;return;}
+  const totR=fl.filter(m=>m.value>0).reduce((s,m)=>s+m.value,0);
+  const totD=fl.filter(m=>m.value<0).reduce((s,m)=>s+Math.abs(m.value),0);
+  el.innerHTML=`
+    <div class="card" style="margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;text-align:center">
+        <div><div style="font-size:16px;font-weight:800;color:var(--ok)">+${totR.toFixed(2)}€</div><div style="font-size:11px;color:var(--sub)">Receitas</div></div>
+        <div><div style="font-size:16px;font-weight:800;color:var(--err)">-${totD.toFixed(2)}€</div><div style="font-size:11px;color:var(--sub)">Despesas</div></div>
+      </div>
+    </div>
+    ${fl.map(m=>`
+      <div class="mitem" onclick="openMov('${m.id}','${m.src}')">
+        <div class="mico">${m.icon}</div>
+        <div class="mbody">
+          <div class="mname">${esc(m.name||'—')}</div>
+          <div class="msub">${esc(m.label)}</div>
+        </div>
+        <div class="mright">
+          <div class="mval" style="color:${m.value>=0?'var(--ok)':'var(--err)'}">${m.value>=0?'+':''}${m.value.toFixed(2)}€</div>
+          <div class="mdate">${fdate(m.date)}</div>
+        </div>
+      </div>`).join('')}
+    <div style="height:16px"></div>`;
+}
+
+function openMov(id,src){
+  if(src==='house')openHmod(houses.find(h=>h.id===id));
+  else if(src==='revenue')openRmod(revenues.find(r=>r.id===id));
+  else oem(id);
+}
+window.openMov=openMov;
+
+g('msearch').addEventListener('input',e=>{searchQ=e.target.value.trim();renderMovimentos();});
+g('mfbar').addEventListener('click',e=>{
+  const c=e.target.closest('.chip');if(!c)return;
+  dateF=c.dataset.d;
+  document.querySelectorAll('#mfbar .chip').forEach(x=>x.classList.toggle('active',x===c));
+  renderMovimentos();
+});
+
+// ─── RESUMO ─────────────────────────────────────────────────────────────────
+function renderSummary(){
+  const rPed=houses.filter(h=>h.status==='Doou').reduce((s,h)=>s+(h.duevalue||0),0);
+  const rCom=revenues.filter(r=>r.type==='Comércio').reduce((s,r)=>s+(r.value||0),0);
+  const rRif=revenues.filter(r=>r.type==='Rifas').reduce((s,r)=>s+(r.value||0),0);
+  const totR=rPed+rCom+rRif,totD=expenses.reduce((s,e)=>s+(e.value||0),0),saldo=totR-totD;
+  g('sgrid').innerHTML=`
+    <div class="sc" style="grid-column:1/-1"><div class="sv ${saldo>=0?'gp':'rp'}">${saldo>=0?'+':''}${saldo.toFixed(2)}€</div><div class="sl">Saldo Atual</div></div>
+    <div class="sc"><div class="sv" style="color:var(--ok)">${totR.toFixed(2)}€</div><div class="sl">Total Receitas</div></div>
+    <div class="sc"><div class="sv" style="color:var(--err)">${totD.toFixed(2)}€</div><div class="sl">Total Despesas</div></div>
+    <div class="sc"><div class="sv">${rPed.toFixed(2)}€</div><div class="sl">🏠 Peditório</div></div>
+    <div class="sc"><div class="sv">${rCom.toFixed(2)}€</div><div class="sl">🏪 Comércio</div></div>
+    <div class="sc"><div class="sv">${rRif.toFixed(2)}€</div><div class="sl">🎟️ Rifas</div></div>
+    <div class="sc"><div class="sv">${houses.filter(h=>h.status==='Doou').length}</div><div class="sl">Casas doaram</div></div>
+    <div class="sc"><div class="sv">${revenues.filter(r=>r.type==='Comércio').length}</div><div class="sl">Estabelecimentos</div></div>
+  `;
+  const emap={'Doou':'🟢','Visitada':'🔵','Ausente':'🟠','Recusou':'🔴','Por Visitar':'⚪'};
+  g('sbreak').innerHTML=`<div class="stitle" style="margin-top:0">Casas por Estado</div>
+    ${['Doou','Visitada','Ausente','Recusou','Por Visitar'].map(s=>`
+      <div class="srow"><span>${emap[s]} ${s}</span><span style="font-weight:800">${houses.filter(h=>h.status===s).length}</span></div>`).join('')}`;
+  const cats={};
+  expenses.forEach(e=>{cats[e.category]=(cats[e.category]||0)+e.value;});
+  g('cbreak').innerHTML=`<div class="stitle" style="margin-top:0">Despesas por Categoria</div>
+    ${Object.keys(cats).length?Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`
+      <div class="srow"><span>${c}</span><span style="font-weight:800;color:var(--err)">-${v.toFixed(2)}€</span></div>`).join('')
+    :'<div style="color:var(--sub);font-size:13px;padding:6px 0">Nenhuma despesa ainda.</div>'}`;
+}
+
+// ─── TABS ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>{
+  const t=b.dataset.t;
+  document.querySelectorAll('.nb').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tp').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');g('tab-'+t).classList.add('active');
+  if(t==='map')setTimeout(()=>map?.invalidateSize(),60);
+}));
+
+// ─── HEADER ─────────────────────────────────────────────────────────────────
+function updateHdr(){
+  const totR=houses.filter(h=>h.status==='Doou').reduce((s,h)=>s+(h.duevalue||0),0)
+            +revenues.reduce((s,r)=>s+(r.value||0),0);
+  const totD=expenses.reduce((s,e)=>s+(e.value||0),0);
+  const s=totR-totD;
+  g('hsaldo').textContent=`${s>=0?'+':''}${s.toFixed(2)}€`;
+  g('hsaldo').style.color=s>=0?'#69f0ae':'#ff5252';
+  g('hsub').textContent=`${houses.length} casas · ${totR.toFixed(2)}€ receitas`;
+}
+
+// ─── NOTICES ────────────────────────────────────────────────────────────────
+function showNotice(){
+  g('nsql').textContent=`CREATE TABLE revenues (\n  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,\n  type text NOT NULL,\n  name text,\n  subtype text,\n  quantity int,\n  value numeric NOT NULL DEFAULT 0,\n  date timestamp DEFAULT now(),\n  notes text\n);\nALTER TABLE revenues DISABLE ROW LEVEL SECURITY;`;
+  g('notice').classList.add('show');document.querySelector('[data-t="resumo"]').click();
+  toast('Cria a tabela revenues no Supabase!');
+}
+function showRLS(){
+  g('nsql').textContent=`ALTER TABLE houses   DISABLE ROW LEVEL SECURITY;\nALTER TABLE expenses DISABLE ROW LEVEL SECURITY;\nALTER TABLE revenues DISABLE ROW LEVEL SECURITY;`;
+  g('notice').classList.add('show');document.querySelector('[data-t="resumo"]').click();
+}
+
+// ─── UTILS ──────────────────────────────────────────────────────────────────
+function g(id){return document.getElementById(id);}
+function fdate(d){return d?new Date(d).toLocaleDateString('pt-PT',{day:'2-digit',month:'short',year:'2-digit'}):''}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function toast(m){const t=g('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+window.addEventListener('load',()=>{initMap();loadAll();});
+</script>
