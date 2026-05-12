@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Peditório das Festas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div id="hdr">
+  <div><h1>🎉 Peditório das Festas</h1><div class="hsub" id="hsub">A ligar...</div></div>
+  <div style="text-align:right"><div class="hsaldo" id="hsaldo">—</div><div class="hsub">saldo</div></div>
+</div>
+
+<div id="tc">
+  <!-- TAB: MAPA -->
+  <div id="tab-map" class="tp active">
+    <div class="minfo">📍 Toca no mapa para marcar uma casa visitada</div>
+    <div id="map"></div>
+    <div class="legend">
+      <div class="li"><div class="ld" style="background:#9e9e9e"></div>Por visitar</div>
+      <div class="li"><div class="ld" style="background:#1565c0"></div>Visitada</div>
+      <div class="li"><div class="ld" style="background:#2e7d32"></div>Doou</div>
+      <div class="li"><div class="ld" style="background:#e65100"></div>Ausente</div>
+      <div class="li"><div class="ld" style="background:#b71c1c"></div>Recusou</div>
+    </div>
+  </div>
+
+  <!-- TAB: RECEITAS -->
+  <div id="tab-receitas" class="tp">
+    <div class="fbar" id="rfbar">
+      <div class="chip active" data-r="all">Todas</div>
+      <div class="chip" data-r="Comércio">🏪 Comércio</div>
+      <div class="chip" data-r="Atividades">🎭 Atividades</div>
+      <div class="chip" data-r="Bar">🍺 Bar</div>
+      <div class="chip" data-r="Rifas">🎟️ Rifas</div>
+    </div>
+    <div class="scroll" id="rlist"><div class="sp">A carregar...</div></div>
+    <button class="fab" id="addrbtn">+</button>
+  </div>
+
+  <!-- TAB: DESPESAS -->
+  <div id="tab-despesas" class="tp">
+    <div class="fbar" id="cfbar">
+      <div class="chip active" data-c="all">Todas</div>
+      <div class="chip" data-c="Material">Material</div>
+      <div class="chip" data-c="Alimentação">Alimentação</div>
+      <div class="chip" data-c="Música">Música</div>
+      <div class="chip" data-c="Transporte">Transporte</div>
+      <div class="chip" data-c="Decoração">Decoração</div>
+      <div class="chip" data-c="Outro">Outro</div>
+    </div>
+    <div class="scroll" id="elist"><div class="sp">A carregar...</div></div>
+    <button class="fab" id="addbtn">+</button>
+  </div>
+
+  <!-- TAB: MOVIMENTOS -->
+  <div id="tab-movimentos" class="tp">
+    <div class="sbar"><input type="text" id="msearch" placeholder="🔍 Pesquisar por nome, casa ou comércio..."></div>
+    <div class="sbar" style="padding-top:0;display:flex;align-items:center;gap:8px">
+      <input type="date" id="mdate" style="flex:1;border-radius:8px;padding:8px 12px;font-size:14px;border:1.5px solid var(--bdr);color:var(--txt)">
+      <button id="mdateclear" style="display:none;border:none;background:none;font-size:18px;cursor:pointer;color:var(--sub);padding:4px 6px;line-height:1">✕</button>
+    </div>
+    <div class="fbar" id="mfbar">
+      <div class="chip active" data-d="all">Tudo</div>
+      <div class="chip" data-d="today">Hoje</div>
+      <div class="chip" data-d="week">Esta semana</div>
+      <div class="chip" data-d="month">Este mês</div>
+      <div class="chip" data-d="receitas">Só receitas</div>
+      <div class="chip" data-d="despesas">Só despesas</div>
+    </div>
+    <div class="scroll" id="mlist"><div class="sp">A carregar...</div></div>
+  </div>
+
+  <!-- TAB: RESUMO -->
+  <div id="tab-resumo" class="tp">
+    <div class="scroll">
+      <div class="notice" id="notice">
+        <h3>⚠️ Tabela revenues em falta</h3>
+        <p>Executa este SQL no <b>SQL Editor</b> do Supabase para criar a tabela de receitas (comércio/rifas):</p>
+        <pre id="nsql"></pre>
+      </div>
+      <div class="sgrid" id="sgrid"></div>
+      <div class="card" id="sbreak"></div>
+      <div class="card" id="cbreak"></div>
+    </div>
+  </div>
+</div>
+
+<nav id="bnav">
+  <button class="nb active" data-t="map"><span class="ni">🗺️</span>Mapa</button>
+  <button class="nb" data-t="receitas"><span class="ni">💰</span>Receitas</button>
+  <button class="nb" data-t="despesas"><span class="ni">💸</span>Despesas</button>
+  <button class="nb" data-t="movimentos"><span class="ni">📋</span>Movimentos</button>
+  <button class="nb" data-t="resumo"><span class="ni">📊</span>Resumo</button>
+</nav>
+
+<!-- MODAL: CASA -->
+<div class="overlay" id="hmod">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle" id="hmtitle">📍 Nova Casa</div>
+    <div class="fg"><label>Nome do Morador</label><input type="text" id="hname" placeholder="Ex: João Silva..."></div>
+    <div class="fg"><label>Morada / Referência</label><input type="text" id="haddr" placeholder="Ex: Rua das Flores nº 3..."></div>
+    <div class="fg"><label>Estado da Visita</label>
+      <select id="hest">
+        <option value="Visitada">🔵 Visitada</option>
+        <option value="Doou">🟢 Doou</option>
+        <option value="Ausente">🟠 Ausente</option>
+        <option value="Recusou">🔴 Recusou</option>
+        <option value="Por Visitar">⚪ Por Visitar</option>
+      </select>
+    </div>
+    <div class="fg" id="vgrp"><label>Valor da Doação (€)</label><input type="number" id="hval" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="fg"><label>Notas</label><textarea id="hnotes" placeholder="Notas opcionais..."></textarea></div>
+    <div class="brow"><button class="btn bs" id="hcancel">Cancelar</button><button class="btn bp" id="hsave">💾 Guardar</button></div>
+    <div id="hdelrow" style="display:none;margin-top:6px"><button class="btn bd" id="hdel">🗑️ Eliminar esta casa</button></div>
+  </div>
+</div>
+
+<!-- MODAL: RECEITA (Comércio / Atividades / Bar / Rifas) -->
+<div class="overlay" id="rmod">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle" id="rmtitle">💰 Nova Receita</div>
+    <div class="fg"><label>Tipo de Receita</label>
+      <select id="rtype">
+        <option value="Comércio">🏪 Peditório Comércio</option>
+        <option value="Atividades">🎭 Atividades</option>
+        <option value="Bar">🍺 Bar</option>
+        <option value="Rifas">🎟️ Venda de Rifas</option>
+      </select>
+    </div>
+    <!-- Comércio -->
+    <div id="rcomf">
+      <div class="fg"><label>Nome do Estabelecimento</label><input type="text" id="rname" placeholder="Ex: Café Central, Mercearia Silva..."></div>
+      <div class="fg"><label>Tipo de Publicidade</label>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:6px 2px">
+          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="sub_cartao" value="Cartão no Cartaz" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 📋 Cartão no Cartaz
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="sub_lona" value="Lona" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 🖼️ Lona na Festa
+          </label>
+          <label style="display:flex;align-items:center;gap:10px;font-size:15px;font-weight:500;color:var(--txt);text-transform:none;letter-spacing:0">
+            <input type="checkbox" id="sub_outro" value="Outro" style="width:20px;height:20px;flex-shrink:0;accent-color:var(--pri-l)"> 📌 Outro
+          </label>
+        </div>
+      </div>
+    </div>
+    <!-- Rifas -->
+    <div id="rrifaf" style="display:none">
+      <div class="fg"><label>Descrição</label><input type="text" id="rdesc" placeholder="Ex: Rifas série A, Bloco 1..."></div>
+      <div class="gcols">
+        <div class="fg"><label>Nº de Rifas</label><input type="number" id="rqty" placeholder="0" min="0" step="1"></div>
+        <div class="fg"><label>Preço/Rifa (€)</label><input type="number" id="rprice" placeholder="0.50" min="0" step="0.01"></div>
+      </div>
+    </div>
+    <!-- Atividades / Bar -->
+    <div id="rgenf" style="display:none">
+      <div class="fg"><label>Descrição</label><input type="text" id="rgendesc" placeholder="Ex: Bilhetes jantar, Consumo bar..."></div>
+    </div>
+    <div class="fg"><label>Valor Total (€)</label><input type="number" id="rvalue" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="fg"><label>Notas</label><textarea id="rnotes" placeholder="Notas opcionais..."></textarea></div>
+    <div class="brow"><button class="btn bs" id="rcancel">Cancelar</button><button class="btn bp" id="rsave">💾 Guardar</button></div>
+    <div id="rdelrow" style="display:none;margin-top:6px"><button class="btn bd" id="rdel">🗑️ Eliminar receita</button></div>
+  </div>
+</div>
+
+<!-- MODAL: DESPESA -->
+<div class="overlay" id="emod">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle" id="emtitle">💸 Nova Despesa</div>
+    <div class="fg"><label>Descrição</label><input type="text" id="edesc" placeholder="Ex: Compra de velas..."></div>
+    <div class="fg"><label>Valor (€)</label><input type="number" id="eval" placeholder="0.00" min="0" step="0.01"></div>
+    <div class="fg"><label>Categoria</label>
+      <select id="ecat">
+        <option>Material</option>
+        <option>Alimentação</option>
+        <option>Música</option>
+        <option>Transporte</option>
+        <option>Decoração</option>
+        <option>Outro</option>
+      </select>
+    </div>
+    <div class="brow"><button class="btn bs" id="ecancel">Cancelar</button><button class="btn bp" id="esave">💾 Guardar</button></div>
+    <div id="edelrow" style="display:none;margin-top:6px"><button class="btn bd" id="edel">🗑️ Eliminar despesa</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
