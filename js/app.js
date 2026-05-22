@@ -5,6 +5,7 @@ const HD={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/j
 let houses=[], expenses=[], revenues=[], andores=[], notas=[], markers={}, map=null;
 let editHId=null, editEId=null, editRId=null, editAId=null, tempLL=null;
 let catF='all', revF='all', dateF='all', andorF='all', searchQ='', specificDate='', andoresTableExists=true, notasTableExists=true;
+let editNotaId=null, movSort='date', revSort='date';
 
 // ─── API ────────────────────────────────────────────────────────────────────
 async function api(table,method='GET',body=null,q=''){
@@ -197,7 +198,8 @@ g('rdel').addEventListener('click',async()=>{
 
 // ─── RENDER RECEITAS ────────────────────────────────────────────────────────
 function renderRevenues(){
-  const fl=revF==='all'?revenues:revenues.filter(r=>r.type===revF);
+  let fl=revF==='all'?revenues:revenues.filter(r=>r.type===revF);
+  if(revSort==='value') fl=[...fl].sort((a,b)=>(b.value||0)-(a.value||0));
   const el=g('rlist');
   if(!fl.length){el.innerHTML=`<div class="sp">Nenhuma receita${revF!=='all'?' nesta categoria':''}.<br><small>Usa o + para adicionar.</small></div>`;return;}
   const tot=fl.reduce((s,r)=>s+(r.value||0),0);
@@ -220,6 +222,11 @@ g('rfbar').addEventListener('click',e=>{
   const c=e.target.closest('.chip');if(!c)return;
   revF=c.dataset.r;
   document.querySelectorAll('#rfbar .chip').forEach(x=>x.classList.toggle('active',x===c));
+  renderRevenues();
+});
+g('rsortbtn').addEventListener('click',()=>{
+  revSort=revSort==='date'?'value':'date';
+  g('rsortbtn').textContent=revSort==='date'?'Data ↓':'Valor ↓';
   renderRevenues();
 });
 g('addrbtn').addEventListener('click',()=>openRmod(null));
@@ -326,7 +333,8 @@ function applyFilters(all){
 }
 
 function renderMovimentos(){
-  const fl=applyFilters(buildAll());
+  let fl=applyFilters(buildAll());
+  if(movSort==='value') fl=[...fl].sort((a,b)=>Math.abs(b.value)-Math.abs(a.value));
   const el=g('mlist');
   if(!fl.length){el.innerHTML=`<div class="sp">Nenhum movimento encontrado.</div>`;return;}
   const totR=fl.filter(m=>m.value>0).reduce((s,m)=>s+m.value,0);
@@ -374,6 +382,11 @@ g('mfbar').addEventListener('click',e=>{
   const c=e.target.closest('.chip');if(!c)return;
   dateF=c.dataset.d;
   document.querySelectorAll('#mfbar .chip').forEach(x=>x.classList.toggle('active',x===c));
+  renderMovimentos();
+});
+g('msortbtn').addEventListener('click',()=>{
+  movSort=movSort==='date'?'value':'date';
+  g('msortbtn').textContent=movSort==='date'?'Data ↓':'Valor ↓';
   renderMovimentos();
 });
 
@@ -611,14 +624,33 @@ function renderNotas(){
     return;
   }
   if(!notas.length){el.innerHTML=`<div class="sp">Nenhuma nota ainda.<br><small>Usa a caixa acima para escrever.</small></div>`;return;}
-  el.innerHTML=notas.map(n=>`
-    <div class="card" style="display:flex;gap:10px;align-items:flex-start">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(n.text)}</div>
-        <div style="font-size:11px;color:var(--sub);margin-top:5px">${fdate(n.created_at)}</div>
-      </div>
-      <button class="btn bd" style="flex:none;width:auto;margin:0;padding:8px 10px;font-size:14px" onclick="delNota('${n.id}')">🗑️</button>
-    </div>`).join('');
+  el.innerHTML=notas.map(n=>{
+    if(editNotaId===n.id) return `
+      <div class="card" style="display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <textarea id="editnotatext" style="width:100%;min-height:80px;font-size:14px;padding:6px;border-radius:6px;border:1px solid var(--sub);background:var(--bg);color:var(--fg);resize:vertical;box-sizing:border-box">${esc(n.text)}</textarea>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:none">
+          <button class="btn bp" style="width:auto;margin:0;padding:8px 10px;font-size:14px" onclick="saveNotaEdit('${n.id}')">💾</button>
+          <button class="btn bd" style="width:auto;margin:0;padding:8px 10px;font-size:14px" onclick="cancelNotaEdit()">✕</button>
+        </div>
+      </div>`;
+    return `
+      <div class="card" style="display:flex;gap:10px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word">${esc(n.text)}</div>
+          <div style="font-size:11px;color:var(--sub);margin-top:5px">${fdate(n.created_at)}</div>
+        </div>
+        <div style="display:flex;gap:4px;flex:none">
+          <button class="btn bp" style="width:auto;margin:0;padding:8px 10px;font-size:14px" onclick="editNota('${n.id}')">✏️</button>
+          <button class="btn bd" style="width:auto;margin:0;padding:8px 10px;font-size:14px" onclick="delNota('${n.id}')">🗑️</button>
+        </div>
+      </div>`;
+  }).join('');
+  if(editNotaId){
+    const ta=document.getElementById('editnotatext');
+    if(ta){ta.focus();ta.selectionStart=ta.selectionEnd=ta.value.length;}
+  }
 }
 
 g('notaaddbtn').addEventListener('click',async()=>{
@@ -641,7 +673,22 @@ window.delNota=async id=>{
   try{
     await api('notas','DELETE',null,`?id=eq.${id}`);
     notas=notas.filter(n=>n.id!==id);
+    editNotaId=null;
     renderNotas();toast('Nota apagada ✓');
+  }catch(e){toast('Erro: '+e.message);}
+};
+window.editNota=id=>{editNotaId=id;renderNotas();};
+window.cancelNotaEdit=()=>{editNotaId=null;renderNotas();};
+window.saveNotaEdit=async id=>{
+  const ta=document.getElementById('editnotatext');
+  const text=ta?.value.trim();
+  if(!text){toast('A nota não pode ficar vazia');return;}
+  try{
+    await api('notas','PATCH',{text},`?id=eq.${id}`);
+    const idx=notas.findIndex(n=>n.id===id);
+    if(idx>=0)notas[idx].text=text;
+    editNotaId=null;
+    renderNotas();toast('Nota atualizada ✓');
   }catch(e){toast('Erro: '+e.message);}
 };
 
